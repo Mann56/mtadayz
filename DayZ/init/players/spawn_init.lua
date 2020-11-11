@@ -21,6 +21,7 @@ addEvent("onSpawnSelectionEnabled",true)
 addEventHandler("onSpawnSelectionEnabled",root,onSpawnSelectionEnabled)
 
 function spawnDayZPlayer(player)
+	if not isElement(player) then return end
 	if not gameplayVariables["spawnselection"] then
 		local number = math.random(table.size(spawnPositions))
 		spawnX,spawnY,spawnZ = spawnPositions[number][1],spawnPositions[number][2],spawnPositions[number][3]
@@ -32,7 +33,7 @@ function spawnDayZPlayer(player)
 		end
 		spawnPlayer (player, spawnX,spawnY,spawnZ, math.random(0,360), skin, 0, 0)
 		setElementFrozen(player, true)
-		fadeCamera (player, true)
+		setTimer(fadeCamera,3000,1,player,true,3.0,255,255,255)
 		setCameraTarget (player)
 		setTimer( function(player)
 			if isElement(player) then
@@ -54,27 +55,24 @@ function spawnDayZPlayer(player)
 		end
 		setElementData(player,"isDead",false)
 		setElementData(player,"logedin",true)
-		setElementData(player,"gender","male")
-		setElementData(player,"bleeding", 0)
-		setElementData(player,"sepsis",0)
-		setElementData(player,"unconscious",false)
-		setElementData(player, "hoursalive", 0)
+		
+		playerStatusTable[player] = {}
+		initDefaultStatusTable(player)
+		initDefaultSkillsTable(player)
+		initDefaultJobTable(player)
 
-		----------------------------------
-		--Player Items on Respawn
 		for i,data in ipairs(playerDataTable) do
-			if data[1] == "bloodtype" then
-				determineBloodType(player)
-			elseif data[1] == "achievements" then
-				--
-			elseif data[1] == "skin" then
-				if not gameplayVariables["newclothingsystem"] then
-					setElementData(player,"skin",73)
-				end
-			else
-				setElementData(player,data[1],data[2])
-			end
+			setElementData(player,data[1],data[2])
 		end
+		
+		determineBloodType(player)
+		setPlayerFracturedBones(player,false)
+		addBackpackToPlayer(player,playerStatusTable[player]["MAX_Slots"])
+		
+		if not gameplayVariables["newclothingsystem"] then
+			playerStatusTable[player]["skin"] = 73
+		end
+		
 		if gameplayVariables["newclothingsystem"] then
 			for i,clothes in ipairs(clothesTable["Collar"]) do
 			local randomChance = math.random(0,100)
@@ -138,15 +136,18 @@ function spawnDayZPlayer(player)
 			end
 		end
 	end
+	
 	if gameplayVariables["newclothingsystem"] then
 		triggerEvent("onPlayerChangeClothes", player)
 	end
 	setElementData(player,"spawnedzombies",0)
+	sendPlayerStatusInfoToClient()
+	triggerClientEvent(player,"onPlayerUpdateSkillsToJournal",player,playerSkillsTable[player])
 end
 
 function killVehicleOccupantsOnExplode()
 	for i,player in pairs(getVehicleOccupants(source)) do
-		triggerEvent("kilLDayZPlayer",player)
+		triggerEvent("killDayZPlayer",player)
 	end
 end
 addEventHandler("onVehicleExplode", getRootElement(), killVehicleOccupantsOnExplode)
@@ -180,7 +181,7 @@ function checkBuggedAccount()
 end
 setTimer(checkBuggedAccount,90000,0)
 
-function kilLDayZPlayer(killer,headshot)
+function killDayZPlayer(killer,headshot)
 	pedCol = false
 	local account = getPlayerAccount(source)
 	if not account then return end
@@ -200,7 +201,11 @@ function kilLDayZPlayer(killer,headshot)
 			setElementData(pedCol,"parent",ped)
 			setElementData(pedCol,"playername",getPlayerName(source))
 			setElementData(pedCol,"deadman",true)
-			setElementData(pedCol,"MAX_Slots",getElementData(source,"MAX_Slots"))
+			setElementData(pedCol,"MAX_Slots",playerStatusTable[source]["MAX_Slots"])
+			if elementBackpack[source] then
+				detachElementFromBone(elementBackpack[source])
+				destroyElement(elementBackpack[source])
+			end
 			local hours, minutes = getTime()
 			if hours < 10 then
 				hour = "0"..hours
@@ -218,15 +223,17 @@ function kilLDayZPlayer(killer,headshot)
 	triggerClientEvent(source,"onClientPlayerDeathInfo",source)
 	if killer then
 		if not getElementData(killer,"zombie") then
-			setElementData(source,"killedBy",killer)
-			if getElementData(killer,"humanity") <= 0 then
-				setElementData(killer,"bandit",true)
-			end
-			if getElementData(source,"bandit") == true then
-				setElementData(killer,"banditskilled",getElementData(killer,"banditskilled")+1)
-			end
-			if headshot == true then
-				setElementData(killer,"headshots",getElementData(killer,"headshots")+1)
+			if not playerStatusTable[killer]["isZombie"] then
+				setElementData(pedCol,"killedBy",killer)
+				if playerStatusTable[killer]["humanity"] <= 0 then
+					playerStatusTable[killer]["isBandit"] = true
+				end
+				if playerStatusTable[source]["bandit"] then
+					playerStatusTable[killer]["killedBandits"] = playerStatusTable[killer]["killedBandits"]+1
+				end
+				if headshot then
+					playerStatusTable[killer]["headshots"] = playerStatusTable[killer]["headshots"]+1
+				end
 			end
 		end
 	end
@@ -264,12 +271,12 @@ function kilLDayZPlayer(killer,headshot)
 		end
 		--Skin
 		if not gameplayVariables["newclothingsystem"] then
-			local skinID = getElementData(source,"skin")
+			local skinID = playerStatusTable[source]["skin"]
 			local skin = getSkinNameFromID(skinID)
 			setElementData(pedCol,skin,1)
 		end
 		--Backpack
-		local backpackSlots = getElementData(source,"MAX_Slots")
+		local backpackSlots = playerStatusTable[source]["MAX_Slots"]
 		if backpackSlots == gameplayVariables["assaultpack_slots"] then
 			setElementData(pedCol,"Assault Pack (ACU)",1)
 		elseif backpackSlots == gameplayVariables["czechvest_slots"] then
@@ -300,7 +307,8 @@ function kilLDayZPlayer(killer,headshot)
 		else
 			spawnDayZPlayer(source)
 		end
-	end,30000,1,source)
+	end,gameplayVariables["playerRespawnCountdown"] * 1000,1,source)
+	sendPlayerStatusInfoToClient()
 end
-addEvent("kilLDayZPlayer",true)
-addEventHandler("kilLDayZPlayer",getRootElement(),kilLDayZPlayer)
+addEvent("killDayZPlayer",true)
+addEventHandler("killDayZPlayer",getRootElement(),killDayZPlayer)

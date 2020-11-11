@@ -24,7 +24,8 @@ local recentlyMoved = false
 local Xdiff,Ydiff
 
 function toggleFPS()
-weapon = getPedWeapon(localPlayer)
+	if not getElementData(localPlayer,"logedin") then return end
+	weapon = getPedWeapon(localPlayer)
 	if weapon ~= 34 then
 		if (not isEnabled) then
 			fadeCamera(false,0,0,0,0)
@@ -47,7 +48,7 @@ end
 bindKey("o","down",toggleFPS)
 
 function toggleViewIfSniper()
-weapon = getPedWeapon(localPlayer)
+	weapon = getPedWeapon(localPlayer)
 	if isEnabled then
 		if weapon == 34 then
 			fadeCamera(false,0,0,0,0)
@@ -118,13 +119,13 @@ function updateCamera()
 			end
 			cameraAngleX = rotX - math.rad(rz)
 			cameraAngleY = rotY + math.rad(rx)
-			if getControlState("vehicle_look_behind") or ( getControlState("vehicle_look_right") and getControlState("vehicle_look_left") ) then
+			if getPedControlState(localPlayer,"vehicle_look_behind") or ( getPedControlState(localPlayer,"vehicle_look_right") and getPedControlState(localPlayer,"vehicle_look_left") ) then
 				cameraAngleX = cameraAngleX + math.rad(180)
 				--cameraAngleY = cameraAngleY + math.rad(180)
-			elseif getControlState("vehicle_look_left") then
+			elseif getPedControlState(localPlayer,"vehicle_look_left") then
 				cameraAngleX = cameraAngleX - math.rad(90)
 				--roll = rx doesn't work out well
-			elseif getControlState("vehicle_look_right") then
+			elseif getPedControlState(localPlayer,"vehicle_look_right") then
 				cameraAngleX = cameraAngleX + math.rad(90)  
 				--roll = -rx
 			end

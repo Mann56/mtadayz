@@ -8,27 +8,21 @@
 #-----------------------------------------------------------------------------#
 ]]
 
-waitList = {}
-GUIEdit = {
-    label = {},
-    staticimage = {}
-}
-
 function panel(state)
-	if not GUIEdit.staticimage[1] then
-		GUIEdit.staticimage[1] = guiCreateStaticImage(0.00, -0.15, 0.31, 0.14, "gui/achievements/icons/bg_achievements.png", true)
-		guiSetAlpha(GUIEdit.staticimage[1], 1.00)
-		guiBringToFront(GUIEdit.staticimage[1])
+	if not JournalTable.image[1] then
+		JournalTable.image[11] = guiCreateStaticImage(0.00, -0.15, 0.31, 0.14, "gui/achievements/icons/bg_achievements.png", true)
+		guiSetAlpha(JournalTable.image[11], 1.00)
+		guiBringToFront(JournalTable.image[11])
 
-		GUIEdit.staticimage[2] = guiCreateStaticImage(0.04, 0.16, 0.29, 0.67, "gui/gear/items/white.png", true, GUIEdit.staticimage[1])
-		GUIEdit.label[1] = guiCreateLabel(0.34, 0.16, 0.62, 0.17, "Achievement Unlocked", true, GUIEdit.staticimage[1])
-		guiSetFont(GUIEdit.label[1], "default-bold-small")
-		guiLabelSetHorizontalAlign(GUIEdit.label[1], "center", false)
-		GUIEdit.label[2] = guiCreateLabel(0.34, 0.33, 0.99, 0.50, "", true, GUIEdit.staticimage[1])
-		guiLabelSetHorizontalAlign(GUIEdit.label[2], "left", false)
-		guiLabelSetVerticalAlign(GUIEdit.label[2], "center")
+		JournalTable.image[12] = guiCreateStaticImage(0.04, 0.16, 0.29, 0.67, "gui/gear/items/white.png", true, JournalTable.image[11])
+		JournalTable.label[30] = guiCreateLabel(0.34, 0.16, 0.62, 0.17, "Achievement Unlocked", true, JournalTable.image[11])
+		guiSetFont(JournalTable.label[30], "default-bold-small")
+		guiLabelSetHorizontalAlign(JournalTable.label[30], "center", false)
+		JournalTable.label[31] = guiCreateLabel(0.34, 0.33, 0.99, 0.50, "", true, JournalTable.image[1])
+		guiLabelSetHorizontalAlign(JournalTable.label[31], "left", false)
+		guiLabelSetVerticalAlign(JournalTable.label[31], "center")
 	else
-		guiSetVisible(GUIEdit.staticimage[1],state)
+		guiSetVisible(JournalTable.image[11],state)
 	end
 end
 
@@ -37,13 +31,13 @@ local yaux = -0.15
 local xaux = 0.00
 function move()
 	yaux = yaux+0.01
-	guiSetPosition(GUIEdit.staticimage[1],xac,yaux,true)
+	guiSetPosition(JournalTable.image[11],xac,yaux,true)
 	if yaux >= 0.00 then
 		removeEventHandler("onClientRender",getRootElement(),move)
 		setTimer(function()
 			function moverparaolado()
 				xaux = xaux-0.01
-				guiSetPosition(GUIEdit.staticimage[1],xaux,yaux,true)
+				guiSetPosition(JournalTable.image[11],xaux,yaux,true)
 				if xaux <= -0.22 then
 					yaux = yac
 					xaux = xac
@@ -62,25 +56,27 @@ function move()
 end
 
 function getAchievements()
-	local achievementsunlocked = fromJSON(getElementData(getLocalPlayer(),"achievements"))
+	if playerStatusTable[localPlayer]["achievements"] then
+		achievementsunlocked = fromJSON(playerStatusTable[localPlayer]["achievements"])
+	end
 	if not achievementsunlocked then
-		setElementData(getLocalPlayer(),"achievements",toJSON({}))
+		playerStatusTable[localPlayer]["achievements"] = toJSON({})
 		achievementsunlocked = {}
 	end
 	return achievementsunlocked
 end
 
 function giveAchievement(ID)
-	if GUIEdit.staticimage[1] and guiGetVisible(GUIEdit.staticimage[1]) then
+	if JournalTable.image[9] and guiGetVisible(JournalTable.image[9]) then
 		table.insert(waitList,ID)
 	else
 		panel(true)
 		if ID then
 			local achievementsunlocked = getAchievements()
 			achievementsunlocked[ID] = true
-			setElementData(getLocalPlayer(),"achievements",toJSON(achievementsunlocked))
-			guiSetText(GUIEdit.label[2],achievements[ID]["name"])
-			guiStaticImageLoadImage(GUIEdit.staticimage[2],pathToImg..achievements[ID]["image"])
+			playerStatusTable[localPlayer]["achievements"] = fromJSON(achievementsunlocked)
+			guiSetText(JournalTable.label[31],achievements[ID]["name"])
+			guiStaticImageLoadImage(JournalTable.image[12],pathToImg..achievements[ID]["image"])
 			addEventHandler("onClientRender",getRootElement(),move)
 		end
 	end
@@ -94,15 +90,15 @@ function check() -- Needs optimizing
 		if not achievementsunlocked[i] then
 			for _,cond in ipairs(all["conditions"]) do
 				if(cond[2] == "greater" and cond[3]) then
-					if getElementData(getLocalPlayer(),cond[1]) > tonumber(cond[3]) then
+					if playerStatusTable[localPlayer]["achievements"][cond[1]] > tonumber(cond[3]) then
 						counter = counter+1
 					end
 				elseif (cond[2] == "equal") then
-					if getElementData(getLocalPlayer(),cond[1]) == cond[3] then
+					if playerStatusTable[localPlayer]["achievements"][cond[1]]== cond[3] then
 						counter = counter+1
 					end
 				elseif (cond[2] == "less" and cond[3]) then
-					if getElementData(getLocalPlayer(),cond[1]) < tonumber(cond[3]) then
+					if playerStatusTable[localPlayer]["achievements"][cond[1]]< tonumber(cond[3]) then
 						counter = counter+1
 					end
 				elseif (cond[2] == "misc_zaxis") then
@@ -136,7 +132,7 @@ function check() -- Needs optimizing
 				if(counter == #all["conditions"]) then
 					giveAchievement(i)
 					for index, element in ipairs(all["items"]) do
-						if getElementData(localPlayer,"CURRENT_Slots") + getItemSlots(element[1]) > getElementData(localPlayer,"MAX_Slots") then
+						if playerStatusTable[localPlayer]["CURRENT_Slots"] + getItemSlots(element[1]) >playerStatusTable[localPlayer]["MAX_Slots"] then
 							startRollMessage2("Inventory","Inventory full, can't accept achievement rewards!",255,0,0)
 							break
 						else
@@ -149,7 +145,7 @@ function check() -- Needs optimizing
 		end
 	end	
 end
-setTimer(check,10000,0)
+--setTimer(check,10000,0) Currently broken due to moving status+achievements to tables instead of elementData
 
 --giveAchievement(2)
 --giveAchievement(1)
@@ -178,7 +174,7 @@ function achievpanel(state)
 		guiSetFont(GUIAchiev.label[1], font0_needhelp)
 		guiLabelSetColor(GUIAchiev.label[1], 0, 0, 0)
 		
-		GUIAchiev.label[2] = guiCreateLabel(0.23, 0.11, 0.21, 0.03, "Your achievements: 01 of 100 (01% completed)", true, GUIAchiev.staticimage[1])
+		GUIAchiev.label[2] = guiCreateLabel(0.23, 0.11, 0.21, 0.03, "Your achievements: 01 of 100 (1% completed)", true, GUIAchiev.staticimage[1])
 		guiLabelSetColor(GUIAchiev.label[2], 45, 45, 45)
 		
 		GUIAchiev.label[3] = guiCreateLabel(0.80, 0.09, 0.14, 0.05, "Close", true, GUIAchiev.staticimage[1])
@@ -188,9 +184,7 @@ function achievpanel(state)
 		GUIAchiev.scrollpane[1] = guiCreateScrollPane(0.09, 0.17, 0.37, 0.70, true, GUIAchiev.staticimage[1])
 		GUIAchiev.scrollpane[2] = guiCreateScrollPane(0.54, 0.17, 0.35, 0.71, true, GUIAchiev.staticimage[1])
 		
-		addEventHandler("onClientGUIClick",GUIAchiev.label[3],function()
-			achievpanel(false)
-		end)
+		
 	else
 		guiSetVisible(GUIAchiev.staticimage[1],state)
 	end
@@ -204,17 +198,21 @@ end
 
 function loadList()  -- Needs optimizing (urgent)
 	local achievunl = getAchievements()
-	achievpanel(true)
+	playSound(":DayZ/sounds/status/journal.wav",false)
+	guiSetVisible(JournalTable.image[9],true)
+	guiSetVisible(JournalTable.image[1],false)
+	guiSetVisible(JournalTable.image[2],false)
+	guiSetVisible(Skills.staticimage[1],false)
 	local y1 = 0.00
 	local ind = 0
 	local aunlocked, aachiev = tablelength(achievunl),tablelength(achievements)
-	guiSetText(GUIAchiev.label[2], "Your achievements: "..aunlocked.." of "..aachiev.." ("..math.round((((aunlocked/aachiev) * 100) or 0),2).."% completed)")
+	guiSetText(JournalTable.label[27], "Your achievements: "..aunlocked.." of "..aachiev.." ("..math.round((((aunlocked/aachiev) * 100) or 0),2).."% completed)")
 	for i, all in pairs(achievunl) do
 		ind = ind+1
 		if ind > 6 then
 			break
 		end
-		panelachiev = guiCreateStaticImage(0.00, y1, 1.00, 0.14, "gui/crosshair/none.png", true, GUIAchiev.scrollpane[1])
+		panelachiev = guiCreateStaticImage(0.00, y1, 1.00, 0.14, "gui/crosshair/none.png", true, JournalTable.scrollpane[1])
 		
 		achievIMG = guiCreateStaticImage(0.00, 0.00, 0.15, 1.00, pathToImg..achievements[i]["image"], true, panelachiev)
 		achievbg = guiCreateStaticImage(0.18, 0.00, 0.82, 1.00, "gui/achievements/icons/bg_achievements.png", true, panelachiev)
@@ -231,7 +229,7 @@ function loadList()  -- Needs optimizing (urgent)
 		for i, all in pairs(achievunl) do
 			ind = ind+1
 			if (ind > 6) then
-				panelachiev = guiCreateStaticImage(0.00, y1, 1.00, 0.14, "gui/crosshair/none.png", true, GUIAchiev.scrollpane[2])
+				panelachiev = guiCreateStaticImage(0.00, y1, 1.00, 0.14, "gui/crosshair/none.png", true, JournalTable.scrollpane[2])
 				
 				achievIMG = guiCreateStaticImage(0.00, 0.00, 0.15, 1.00, pathToImg..achievements[i]["image"], true, panelachiev)
 				achievbg = guiCreateStaticImage(0.18, 0.00, 0.82, 1.00, "gui/achievements/icons/bg_achievements.png", true, panelachiev)

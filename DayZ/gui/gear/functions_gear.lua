@@ -28,7 +28,7 @@ addEvent("refreshLootManual", true)
 addEventHandler("refreshLootManual", localPlayer, refreshLootManual)
 
 function getPlayerMaxAviableSlots()
-	return getElementData(localPlayer, "MAX_Slots")
+	return playerStatusTable[localPlayer]["MAX_Slots"]
 end
 --[[
 function getPlayerMaxAviableSlots()
@@ -143,7 +143,7 @@ function onPlayerMoveItemOutOFInventory (itemName,loot)
 	end
 	
 	if gameplayVariables["newclothingsystem"] then
-		if itemName == "Military collar" or itemName == "Africa collar" or itemName == "LS collar" or itemName == "Gold collar" or itemName == "Silver collar" or itemName == "Black Bandana (M)" or itemName == "Blue Bandana (M)" or itemName == "Green Bandana (M)" or itemName == "Red Bandana (M)" or itemName == "Dark Glasses" or itemName == "Red Glasses" or itemName == "Square Glasses" or itemName == "Black Bandana (H)" or itemName == "Blue Bandana (H)" or itemName == "Green Bandana (H)" or itemName == "Red Bandana (H)" or itemName == "Black Beret" or itemName == "Red Beret" or itemName == "Old Hat" or itemName == "Black Hat" or itemName == "Yellow Hat" or itemName == "Black Trucker" or itemName == "Blue Trucker" or itemName == "Green Trucker" or itemName == "Red Trucker" or itemName == "Yellow Trucker" or itemName == "Cow-Boy Hat" or itemName == "White Hat" or itemName == "Hockey Mask" or itemName == "Black Shoe" or itemName == "Sport Shoe" or itemName == "Brown Shoe" or itemName == "Biker Shoe" or itemName == "Blue Shoe" or itemName == "Red Shoe" or itemName == "Beach Shoe" or itemName == "Black Pants" or itemName == "Beige Pants" or itemName == "Gray Shorts" or itemName == "Blue Shorts" or itemName == "Blue Jeans" or itemName == "Green Jeans" or itemName == "Gray Pants" or itemName == "Yellow Pants" or itemName == "Blue Jogging" or itemName == "Gray Jogging" or itemName == "Military Pants" or itemName == "Beige Vest" or itemName == "Baseball Shirt" or itemName == "Baseball 2 Shirt" or itemName == "Red Vest" or itemName == "Grey Shirt" or itemName == "Green Vest" or itemName == "Hawai Shirt" or itemName == "Black Vest" or itemName == "Brown Vest" or itemName == "Biker Vest" or itemName == "Blue Shirt" or itemName == "Green 2 Vest" or itemName == "Number 5 Shirt" or itemName == "Monk Shirt" or itemName == "Helmet" or itemName == "MX Helmet" then
+		if itemName == "Military collar" or itemName == "Africa collar" or itemName == "LS collar" or itemName == "Gold collar" or itemName == "Silver collar" or itemName == "Black Bandana (M)" or itemName == "Blue Bandana (M)" or itemName == "Green Bandana (M)" or itemName == "Red Bandana (M)" or itemName == "Dark Glasses" or itemName == "Red Glasses" or itemName == "Square Glasses" or itemName == "Black Bandana (H)" or itemName == "Blue Bandana (H)" or itemName == "Green Bandana (H)" or itemName == "Red Bandana (H)" or itemName == "Black Beret" or itemName == "Red Beret" or itemName == "Old Hat" or itemName == "Black Hat" or itemName == "Yellow Hat" or itemName == "Black Trucker" or itemName == "Blue Trucker" or itemName == "Green Trucker" or itemName == "Red Trucker" or itemName == "Yellow Trucker" or itemName == "Cow-Boy Hat" or itemName == "White Hat" or itemName == "Hockey Mask" or itemName == "Black Shoe" or itemName == "Sport Shoe" or itemName == "Brown Shoe" or itemName == "Biker Shoe" or itemName == "Blue Shoe" or itemName == "Red Shoe" or itemName == "Beach Shoe" or itemName == "Black Pants" or itemName == "Beige Pants" or itemName == "Gray Shorts" or itemName == "Blue Shorts" or itemName == "Blue Jeans" or itemName == "Green Jeans" or itemName == "Gray Pants" or itemName == "Yellow Pants" or itemName == "Blue Jogging" or itemName == "Gray Jogging" or itemName == "Military Pants" or itemName == "Beige Vest" or itemName == "Baseball Shirt" or itemName == "Baseball 2 Shirt" or itemName == "Red Vest" or itemName == "Grey Shirt" or itemName == "Green Vest" or itemName == "Hawaii Shirt" or itemName == "Black Vest" or itemName == "Brown Vest" or itemName == "Biker Vest" or itemName == "Blue Shirt" or itemName == "Green 2 Vest" or itemName == "Number 5 Shirt" or itemName == "Monk Shirt" or itemName == "Helmet" or itemName == "MX Helmet" then
 			triggerServerEvent("checkPlayerClothes",localPlayer,itemName)
 		end
 	end
@@ -197,6 +197,7 @@ function onPlayerMoveItemOutOFInventory (itemName,loot)
 	if loot and getElementData(loot,"itemloot") then
 		triggerServerEvent("refreshItemLoot",getRootElement(),loot,getElementData(loot,"parent"))
 	end
+	onClientJobCheckIfItemInInventory()
 end
 addEvent( "onPlayerMoveItemOutOFInventory", true )
 addEventHandler( "onPlayerMoveItemOutOFInventory", getRootElement(), onPlayerMoveItemOutOFInventory )
@@ -247,6 +248,16 @@ function onPlayerMoveItemInInventory(itemName,loot)
 		itemPlus = 1
 	elseif itemName == "Czech Backpack" then
 		itemPlus = 1
+	end
+	if playerSkillsTable[localPlayer] then
+		if playerSkillsTable[localPlayer]["ScavengerGoodChance"] > 0 then
+			local additionalItemChance = math.random(0,100)
+			if additionalItemChance <= playerSkillsTable[localPlayer]["ScavengerGoodChance"] then
+				if playerStatusTable[localPlayer]["CURRENT_Slots"] + (getItemSlots(itemName)*2) <= playerStatusTable[localPlayer]["MAX_Slots"] then
+					itemPlus = itemPlus+1
+				end
+			end
+		end
 	end
 	if not getElementData(localPlayer, itemName) then
 		setElementData(localPlayer, itemName, itemPlus)
@@ -343,7 +354,7 @@ end
 
 function isPlayerInLoot()
 	if getElementData(localPlayer,"loot") then
-			return getElementData(localPlayer,"currentCol")
+		return getElementData(localPlayer,"currentCol")
 	end
 	return false
 end
@@ -366,6 +377,10 @@ function playerUseItem(itemName,itemInfo)
 			playSound(":DayZ/sounds/items/eat_"..number..".ogg",false)
 			triggerServerEvent("onPlayerRequestChangingStats",localPlayer,itemName,itemInfo,"food")
 		end
+	elseif itemInfo == "Tear cloth up" then
+		if itemName == "Military collar" or itemName == "Africa collar" or itemName == "LS collar" or itemName == "Gold collar" or itemName == "Silver collar" or itemName == "Black Bandana (M)" or itemName == "Blue Bandana (M)" or itemName == "Green Bandana (M)" or itemName == "Red Bandana (M)" or itemName == "Black Bandana (H)" or itemName == "Blue Bandana (H)" or itemName == "Green Bandana (H)" or itemName == "Red Bandana (H)" or itemName == "Black Trucker" or itemName == "Blue Trucker" or itemName == "Green Trucker" or itemName == "Red Trucker" or itemName == "Yellow Trucker" or itemName == "Black Pants" or itemName == "Beige Pants" or itemName == "Gray Shorts" or itemName == "Blue Shorts" or itemName == "Blue Jeans" or itemName == "Green Jeans" or itemName == "Gray Pants" or itemName == "Yellow Pants" or itemName == "Blue Jogging" or itemName == "Gray Jogging" or itemName == "Military Pants" or itemName == "Beige Vest" or itemName == "Baseball Shirt" or itemName == "Baseball 2 Shirt" or itemName == "Red Vest" or itemName == "Grey Shirt" or itemName == "Green Vest" or itemName == "Hawaii Shirt" or itemName == "Black Vest" or itemName == "Brown Vest" or itemName == "Biker Vest" or itemName == "Blue Shirt" or itemName == "Green 2 Vest" or itemName == "Number 5 Shirt" or itemName == "Monk Shirt" then
+			triggerServerEvent("onPlayerCreateDIYBandage",localPlayer,itemName, itemInfo)
+		end
 	elseif itemInfo == "Put clothes on" then
 		if gameplayVariables["newclothingsystem"] then
 			if itemName == "Survivor Clothing" or itemName == "Survivor Clothing (Female)" or itemName == "Civilian Clothing" or itemName == "Civilian Clothing (Female)" or itemName == "Camouflage Clothing" or itemName == "Ghillie Suit" then
@@ -375,7 +390,7 @@ function playerUseItem(itemName,itemInfo)
 				triggerServerEvent("onPlayerChangeClothes",localPlayer)
 			end
 		else
-			if itemName == "Military collar" or itemName == "Africa collar" or itemName == "LS collar" or itemName == "Gold collar" or itemName == "Silver collar" or itemName == "Black Bandana (M)" or itemName == "Blue Bandana (M)" or itemName == "Green Bandana (M)" or itemName == "Red Bandana (M)" or itemName == "Dark Glasses" or itemName == "Red Glasses" or itemName == "Square Glasses" or itemName == "Black Bandana (H)" or itemName == "Blue Bandana (H)" or itemName == "Green Bandana (H)" or itemName == "Red Bandana (H)" or itemName == "Black Beret" or itemName == "Red Beret" or itemName == "Old Hat" or itemName == "Black Hat" or itemName == "Yellow Hat" or itemName == "Black Trucker" or itemName == "Blue Trucker" or itemName == "Green Trucker" or itemName == "Red Trucker" or itemName == "Yellow Trucker" or itemName == "Cow-Boy Hat" or itemName == "White Hat" or itemName == "Hockey Mask" or itemName == "Black Shoe" or itemName == "Sport Shoe" or itemName == "Brown Shoe" or itemName == "Biker Shoe" or itemName == "Blue Shoe" or itemName == "Red Shoe" or itemName == "Beach Shoe" or itemName == "Black Pants" or itemName == "Beige Pants" or itemName == "Gray Shorts" or itemName == "Blue Shorts" or itemName == "Blue Jeans" or itemName == "Green Jeans" or itemName == "Gray Pants" or itemName == "Yellow Pants" or itemName == "Blue Jogging" or itemName == "Gray Jogging" or itemName == "Military Pants" or itemName == "Beige Vest" or itemName == "Baseball Shirt" or itemName == "Baseball 2 Shirt" or itemName == "Red Vest" or itemName == "Grey Shirt" or itemName == "Green Vest" or itemName == "Hawai Shirt" or itemName == "Black Vest" or itemName == "Brown Vest" or itemName == "Biker Vest" or itemName == "Blue Shirt" or itemName == "Green 2 Vest" or itemName == "Number 5 Shirt" or itemName == "Monk Shirt" then
+			if itemName == "Military collar" or itemName == "Africa collar" or itemName == "LS collar" or itemName == "Gold collar" or itemName == "Silver collar" or itemName == "Black Bandana (M)" or itemName == "Blue Bandana (M)" or itemName == "Green Bandana (M)" or itemName == "Red Bandana (M)" or itemName == "Dark Glasses" or itemName == "Red Glasses" or itemName == "Square Glasses" or itemName == "Black Bandana (H)" or itemName == "Blue Bandana (H)" or itemName == "Green Bandana (H)" or itemName == "Red Bandana (H)" or itemName == "Black Beret" or itemName == "Red Beret" or itemName == "Old Hat" or itemName == "Black Hat" or itemName == "Yellow Hat" or itemName == "Black Trucker" or itemName == "Blue Trucker" or itemName == "Green Trucker" or itemName == "Red Trucker" or itemName == "Yellow Trucker" or itemName == "Cow-Boy Hat" or itemName == "White Hat" or itemName == "Hockey Mask" or itemName == "Black Shoe" or itemName == "Sport Shoe" or itemName == "Brown Shoe" or itemName == "Biker Shoe" or itemName == "Blue Shoe" or itemName == "Red Shoe" or itemName == "Beach Shoe" or itemName == "Black Pants" or itemName == "Beige Pants" or itemName == "Gray Shorts" or itemName == "Blue Shorts" or itemName == "Blue Jeans" or itemName == "Green Jeans" or itemName == "Gray Pants" or itemName == "Yellow Pants" or itemName == "Blue Jogging" or itemName == "Gray Jogging" or itemName == "Military Pants" or itemName == "Beige Vest" or itemName == "Baseball Shirt" or itemName == "Baseball 2 Shirt" or itemName == "Red Vest" or itemName == "Grey Shirt" or itemName == "Green Vest" or itemName == "Hawaii Shirt" or itemName == "Black Vest" or itemName == "Brown Vest" or itemName == "Biker Vest" or itemName == "Blue Shirt" or itemName == "Green 2 Vest" or itemName == "Number 5 Shirt" or itemName == "Monk Shirt" then
 				triggerEvent("displayClientInfo", localPlayer, "Clothes", "You can't wear this!", 255, 0, 0)
 				return
 			else
@@ -437,55 +452,84 @@ function playerUseItem(itemName,itemInfo)
 		triggerServerEvent("onPlayerTransfuseBlood",localPlayer)
 	elseif itemInfo == "Equip Backpack" then
 		if itemName == "Assault Pack (ACU)" then
-			if getPlayerCurrentSlots() <= 12 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["assaultpack_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["assaultpack_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["assaultpack_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "Czech Vest Pouch" then
-			if getPlayerCurrentSlots() <= 13 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["czechvest_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["czechvest_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["czechvest_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "ALICE Pack" then
-			if getPlayerCurrentSlots() <= 16 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["alice_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["alice_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["alice_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "Survival ACU" then
-			if getPlayerCurrentSlots() <= 17 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["survival_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["survival_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["survival_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "British Assault Pack" then
-			if getPlayerCurrentSlots() <= 18 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["britishassault_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["britishassault_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["britishassault_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "Backpack (Coyote)" then
-			if getPlayerCurrentSlots() <= 24 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["coyote_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["coyote_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["coyote_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		elseif itemName == "Czech Backpack" then
-			if getPlayerCurrentSlots() <= 30 then
+			if playerStatusTable[localPlayer]["MAX_Slots"] == gameplayVariables["czech_slots"] then
+				startRollMessage2("Backpack","You have that backpack already!",255,0,0)
+				return
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] < gameplayVariables["czech_slots"] then
 				triggerServerEvent("onPlayerEquipBackpack",localPlayer,itemName)
-			else
+			elseif playerStatusTable[localPlayer]["MAX_Slots"] > gameplayVariables["czech_slots"] then
 				startRollMessage2("Backpack","This backpack is too small.",255,0,0)
+				return
 			end
 		end
 	end
+	onClientJobCheckIfItemInInventory()
 end
 
 function onWeaponFireDeductAmmo(weapon)
 	if source == localPlayer then
-		local weapon_1 = getElementData(source,"currentweapon_1")
-		local weapon_2 = getElementData(source,"currentweapon_2")
+		local weapon_1 = playerStatusTable[localPlayer]["currentweapon_1"]
+		local weapon_2 = playerStatusTable[localPlayer]["currentweapon_2"]
 		local ammoName
 		if weapon == 25 or weapon == 26 or weapon == 27 or weapon == 30 or weapon == 31 or weapon == 33 or weapon == 34 then
 			ammoName = getWeaponAmmoFromName(weapon_1)
@@ -493,6 +537,14 @@ function onWeaponFireDeductAmmo(weapon)
 			ammoName = getWeaponAmmoFromName(weapon_2)
 		end
 		if getElementData(localPlayer,ammoName) > 0 then
+			if playerSkillsTable[localPlayer] then
+				if playerSkillsTable[localPlayer]["EngineerAmmoChance"] > 0 then
+					local ammoChance = math.random()
+					if ammoChance <= playerSkillsTable[localPlayer]["EngineerAmmoChance"] then
+						return
+					end
+				end
+			end
 			setElementData(localPlayer,ammoName,getElementData(localPlayer,ammoName)-1)
 		end
 	end

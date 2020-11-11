@@ -40,7 +40,7 @@ function onPlayerEnterDayzVehicle(veh,seat)
 	end
 	if (getElementData(col,"fuel") or 0) < 0 then
 		if getElementModel(veh) ~= 509 then
-			triggerClientEvent (source, "displayClientInfo", source,"Vehicle","No tank left in this vehicle!",22,255,0)
+			triggerClientEvent (source, "displayClientInfo", source,"Vehicle","No fuel left in this vehicle!",22,255,0)
 			setVehicleEngineState ( veh, false )
 			return
 		end
@@ -116,7 +116,7 @@ function repairVehicle (veh)
 		setElementData(veh,"repairer",source)
 		setElementData(source,"repairingvehicle",veh)
 		triggerClientEvent(source,"onPlayerActionPlaySound",source,"repair")
-		setPedAnimation (source,"SCRATCHING","sclng_r",-1,false)
+		setPedAnimation (source,"SCRATCHING","sclng_r",(1000-health)*120,false)
 		triggerClientEvent (source, "displayClientInfo", source,"Vehicle","You started to repair "..name,0,255,0)
 	else
 		triggerClientEvent (source, "displayClientInfo", source,"Vehicle","You need Scrap Metal to repair a vehicle!",255,0,0)
@@ -128,7 +128,13 @@ addEventHandler("repairVehicle",getRootElement(),repairVehicle)
 function fixVehicleDayZ(veh,player,name)
 	local scrap = getElementData(player,"Scrap Metal")
 	if scrap then
-		setElementHealth(veh,getElementHealth(veh)+200)
+		local repairHealth = 200
+		if playerSkillsTable[player] then
+			if playerSkillsTable[player]["EngineerDuctChance"] > 0 then
+				repairHealth = repairHealth+repairHealth*(playerSkillsTable[player]["EngineerDuctChance"]/100)
+			end
+		end
+		setElementHealth(veh,getElementHealth(veh)+repairHealth)
 		if getElementHealth(veh) >= 1000 then 
 			setElementHealth(veh,1000) 
 			fixVehicle (veh) 
@@ -240,8 +246,7 @@ function respawnDayZVehicles(player)
             return --Stops players from using the respawn command
         end
     end
-	
-for k, veh in ipairs(getElementsByType("vehicle")) do
+	for k, veh in ipairs(getElementsByType("vehicle")) do
 		if isVehicleBlown(veh) or isElementInWater(veh) then
 			if getElementModel(veh) ~= 453 or getElementModel(veh) ~= 595 or getElementModel(veh) ~= 473  then
 				local col = getElementData(veh,"parent")
@@ -260,6 +265,7 @@ addCommandHandler ( "respawndayzvehicles", respawnDayZVehicles ) -- Respawn blow
 
 function notifyAboutExplosion()
 	local col = getElementData(source,"parent")
+	if not col then return end
 	local x1,y1,z1 = getElementPosition(source)
 	id,x,y,z  = getElementData(col,"spawn")[1],getElementData(col,"spawn")[2],getElementData(col,"spawn")[3],getElementData(col,"spawn")[4]
     respawnExplodedVehicleTimer = setTimer(respawnDayZVehicle,gameplayVariables["explodedvehiclesrespawn"],1,id,x,y,z,source,col,getElementData(col,"MAX_Slots"))
